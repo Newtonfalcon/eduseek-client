@@ -1,65 +1,125 @@
-import Image from "next/image";
+"use client"
+import { useState, useEffect, useRef } from "react";
+import axios from "axios";
+import {v4 as uuidv4} from "uuid"
+import ReactMarkdown from "react-markdown";
 
-export default function Home() {
+export default function EduSeekAgent({  apiPath = "http://10.139.1.249:5520/" }) {
+  const [prompt, setPrompt] = useState("");
+  const [threadId, setThreadId] = useState(uuidv4());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const sendPrompt = async (e) => {
+    e.preventDefault();
+    if (!prompt.trim()) return;
+
+    const userMsg = { role: "user", text: prompt };
+    setMessages((prev) => [...prev, userMsg]);
+    setPrompt("");
+    setLoading(true);
+    setError(null);
+
+    try {
+      if(threadId == null || threadId == ""){
+        const id = uuidv4()
+        setThreadId(id)
+      }
+      const payload = { prompt: userMsg.text, threadid: threadId };
+      const res = await axios.post(apiPath, payload, { headers: { "Content-Type": "application/json" } });
+
+      const data = res.data || {};
+      const assistantMsg = {
+        role: "assistant",
+        text: data || "No response received.",
+      };
+      if (data.threadId) setThreadId(data.threadId);
+
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch (err) {
+      setError(err.message || "Error connecting to server.");
+      setMessages((prev) => [...prev, { role: "assistant", text: err.message }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearChat = () => {
+    setMessages([]);
+    
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="w-full h-screen flex flex-col bg-white text-black">
+      {/* Header */}
+      <div className="bg-white px-6 py-4 border-b flex justify-between items-center shadow-sm">
+        <div>
+          <h1 className="text-xl font-semibold">🎓 EduSeek AI</h1>
+          <p className="text-xs text-slate-600">Your Scholarship Finder Assistant</p>
+        </div>
+        <button
+          onClick={clearChat}
+          className="text-sm px-3 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 transition"
+        >Clear</button>
+      </div>
+
+      {/* Chat Section */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-slate-500 text-sm">
+            <span className="text-4xl mb-2">💬</span>
+            Ask me about scholarships, universities, or study grants!
+          </div>
+        ) : (
+          messages.map((m, i) => (
+            <div key={i} className={`flex  ${m.role === 'user' ? 'justify-end' : 'justify-start'} w-[100%]`}>
+              <div
+                className={`px-4 py-3 rounded-2xl w-max-[90%] overflow-x-hidden  text-sm wrap-break-word whitespace-pre-wrap  ${
+                  m.role === 'user'
+                    ? 'bg-slate-200 text-black rounded-br-none'
+                    : 'bg-slate-100 text-black rounded-bl-none'
+                }`}
+              >
+
+                <ReactMarkdown>{m.text}</ReactMarkdown>
+              </div>
+            </div>
+          ))
+        )}
+        <div ref={chatEndRef} />
+      </div>
+
+   
+      <form
+        onSubmit={sendPrompt}
+        className="w-full bg-white border-t px-4 py-3 flex items-center gap-2 sticky bottom-0"
+      >
+        <input
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Type your question..."
+          className="flex-1 px-4 py-3 rounded-full border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 text-black"
+          disabled={loading}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-5 py-3 bg-slate-900 text-white rounded-full hover:bg-slate-800 disabled:opacity-60 transition flex-shrink-0"
+        >
+          {loading ? "..." : "Send"}
+        </button>
+      </form>
+
+      {/* Footer */}
+      <div className="text-xs text-center text-slate-500 py-2 bg-white border-t">
+        powered by Netech, creating solutions
+      </div>
     </div>
   );
 }
