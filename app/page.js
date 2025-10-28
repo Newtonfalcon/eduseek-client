@@ -4,7 +4,7 @@ import axios from "axios";
 import {v4 as uuidv4} from "uuid"
 import ReactMarkdown from "react-markdown";
 
-export default function EduSeekAgent({  apiPath = "http://10.139.1.249:5520/" }) {
+export default function EduSeekAgent({  apiPath = "https://eduseek-server.vercel.app/" }) {
   const [prompt, setPrompt] = useState("");
   const [threadId, setThreadId] = useState(uuidv4());
   const [loading, setLoading] = useState(false);
@@ -116,7 +116,7 @@ export default function EduSeekAgent({  apiPath = "http://10.139.1.249:5520/" })
         </button>
       </form>
 
-      {/* Footer */}
+   
       <div className="text-xs text-center text-slate-500 py-2 bg-white border-t">
         powered by Netech, creating solutions
       </div>
